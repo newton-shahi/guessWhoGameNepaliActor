@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Guess Who: Nepali Actors Edition — Board</title>
+  <style>
+    :root{
+      --bg1:#f6f8ff; --bg2:#eef7f9; --accent:#6c5ce7; --muted:#556; --card-w:150px; --card-h:210px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;font-family: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;
+      background: radial-gradient(1000px 500px at 10% 8%, #fbf7ff 0%, transparent 15%), linear-gradient(180deg,var(--bg1),var(--bg2));
+      display:flex;align-items:flex-start;justify-content:center;padding:28px;color:#102027;
+    }
+
+    .container{width:1100px;max-width:96%;background:rgba(255,255,255,0.7);border-radius:18px;padding:18px;box-shadow:0 12px 40px rgba(10,18,30,0.06);backdrop-filter:blur(6px)}
+    header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .title{display:flex;align-items:center;gap:12px}
+    .logo{width:56px;height:56px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#00b894);display:grid;place-items:center;color:white;font-weight:800}
+    h1{margin:0;font-size:18px}
+    p.lead{margin:0;color:var(--muted);font-size:13px}
+
+    .controls{display:flex;gap:8px}
+    .btn{background:#fff;border:1px solid rgba(10,20,40,0.06);padding:8px 12px;border-radius:10px;cursor:pointer;font-weight:600}
+
+    .board{display:grid;gap:16px;padding:16px 6px 22px;grid-template-columns:repeat(auto-fit,minmax(120px,1fr))}
+
+    .card-wrap{perspective:1200px}
+    .card{width:var(--card-w);height:var(--card-h);border-radius:14px;position:relative;transform-style:preserve-3d;transition:transform .7s cubic-bezier(.2,.9,.28,1);cursor:pointer;margin:0 auto;box-shadow:0 8px 20px rgba(12,20,40,0.08);user-select:none;background:#fff}
+    .card:hover{transform:translateY(-6px)}
+    .card.flipped{transform:rotateY(180deg)}
+
+    .face{position:absolute;inset:0;border-radius:14px;backface-visibility:hidden;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center}
+
+    .front{background:linear-gradient(180deg,#ffffff, #f6f8ff);padding:10px;gap:8px}
+    .front img{width:84px;height:84px;border-radius:999px;object-fit:cover;border:5px solid rgba(255,255,255,0.7);box-shadow:0 8px 20px rgba(10,16,30,0.08)}
+    .front .name{font-weight:700;font-size:13px;color:#122; text-align:center}
+
+    .back{transform:rotateY(180deg);background:linear-gradient(135deg,#eef2ff,#f2fff7);display:grid;place-items:center;padding:12px}
+    .back .pattern{width:90%;height:70%;border-radius:10px;background-image:linear-gradient(135deg, rgba(108,92,231,0.06) 0%, rgba(0,184,148,0.04) 100%);display:grid;place-items:center}
+    .back .pattern svg{opacity:0.14}
+
+    @media (min-width:900px){.board{grid-template-columns:repeat(6,1fr)}}
+    @media (min-width:700px) and (max-width:899px){.board{grid-template-columns:repeat(4,1fr)}}
+    @media (max-width:699px){.board{grid-template-columns:repeat(3,1fr)} .card{width:130px;height:180px}}
+
+    footer{display:flex;justify-content:space-between;color:var(--muted);font-size:13px;padding-top:8px}
+
+    .card-wrap{opacity:0;transform:translateY(10px);animation:enter .5s forwards}
+    @keyframes enter{to{opacity:1;transform:none}}
+  </style>
+</head>
+<body>
+  <div class="container" role="application">
+    <header>
+      <div class="title">
+        <div class="logo">GW</div>
+        <div>
+          <h1>Guess Who: Nepali Actors Edition</h1>
+          <p class="lead">Two-player guess-who board — flip cards to hide the identity.</p>
+        </div>
+      </div>
+      <div class="controls">
+        <button class="btn" id="resetBtn">Reset Board</button>
+        <button class="btn" id="shuffleBtn">Shuffle</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="board" id="board" aria-label="Guess Who board"></section>
+    </main>
+
+    <footer>
+      <div>Designed for a two-player Guess Who experience — flip to reveal/hide.</div>
+      <div style="opacity:.85">Local demo • No scoring</div>
+    </footer>
+  </div>
+
+  <script>
+    const people = [
+      'Anmol KC','Priyanka Karki','Dayahang Rai','Swastima Khadka','Paul Shah','Namrata Shrestha','Aanchal Sharma','Najir Husen',
+      'Keki Adhikari','Saugat Malla','Barsha Raut','Bipin Karki','Rekha Thapa','Rajesh Hamal','Bhuwan K.C.','Karishma Manandhar',
+      'Jharana Thapa','Nischal Basnet','Surakshya Panta','Aayush Rijal','Deepak Raj Giri','Kedar Ghimire','Madan Krishna Shrestha','Hari Bansha Acharya',
+      'Shiva Shrestha','Samragyee RL Shah','Neeta Dhungana','Anup Baral','Sitaram Kattel','Wilson Bikram Rai'
+    ];
+
+    const board = document.getElementById('board');
+    const colors = ['#ff8a65','#f48fb1','#90caf9','#a5d6a7','#ffd54f','#b39ddb','#80deea','#ffcc80'];
+
+    const backSVG = `<svg width='120' height='80' viewBox='0 0 120 80' xmlns='http://www.w3.org/2000/svg'>
+      <defs><linearGradient id='a' x1='0' x2='1'><stop offset='0' stop-color='#6c5ce7'/><stop offset='1' stop-color='#00b894'/></linearGradient></defs>
+      <rect x='0' y='0' width='120' height='80' rx='10' fill='url(#a)' opacity='0.14'/>
+      <g transform='translate(20,12)' fill='none' stroke='rgba(10,12,30,0.22)' stroke-width='1'>
+        <path d='M0 52 C20 20, 60 20, 80 52' />
+        <circle cx='60' cy='24' r='6' fill='rgba(255,255,255,0.08)' />
+      </g>
+    </svg>`;
+
+    function initials(name){ return name.split(/\s+/).map(n=>n[0]).slice(0,2).join('').toUpperCase(); }
+
+    function personImageData(name, bg){
+      const init = initials(name);
+      const svg = `<?xml version="1.0" encoding="UTF-8"?><svg xmlns='http://www.w3.org/2000/svg' width='400' height='400'>
+        <rect width='100%' height='100%' fill='${bg}' />
+        <text x='200' y='230' font-family='system-ui, Arial' font-size='128' text-anchor='middle' fill='white' font-weight='700'>${init}</text>
+      </svg>`;
+      return 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+    }
+
+    function imagePath(name){
+      const fileBase = name.toLowerCase().replace(/\s+/g, '_').replace(/\./g, '');
+      return `images/${fileBase}`;
+    }
+
+    function createCard(name, idx){
+      const wrap = document.createElement('div'); wrap.className = 'card-wrap';
+      const card = document.createElement('button');
+      card.className = 'card'; card.type='button'; card.setAttribute('aria-pressed','false');
+      card.setAttribute('aria-label', name + ' card');
+
+      const front = document.createElement('div'); front.className = 'face front';
+      const img = document.createElement('img');
+      const basePath = imagePath(name);
+      const extensions = ['.jpg','.png','.jpeg'];
+      let loaded = false;
+
+      // Try each extension
+      for (let ext of extensions) {
+        const testPath = basePath + ext;
+        const testImg = new Image();
+        testImg.src = testPath;
+        testImg.onload = () => { if(!loaded){ img.src = testPath; loaded = true; } };
+        testImg.onerror = () => {
+          if (!loaded && ext === '.jpeg') img.src = personImageData(name, colors[idx % colors.length]);
+        };
+      }
+
+      img.alt = name + ' portrait';
+      front.appendChild(img);
+      const nm = document.createElement('div'); nm.className='name'; nm.textContent = name; front.appendChild(nm);
+
+      const back = document.createElement('div'); back.className='face back';
+      const pattern = document.createElement('div'); pattern.className='pattern';
+      pattern.innerHTML = backSVG + `<div style="position:absolute;bottom:8px;right:10px;font-size:11px;color:rgba(10,12,30,0.18)">GW</div>`;
+      back.appendChild(pattern);
+
+      card.appendChild(front); card.appendChild(back);
+
+      card.addEventListener('click', ()=>{
+        card.classList.toggle('flipped');
+        card.setAttribute('aria-pressed', card.classList.contains('flipped'));
+      });
+      card.addEventListener('keydown', (e)=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); card.click(); }});
+
+      wrap.style.animationDelay = (idx * 35) + 'ms';
+      wrap.appendChild(card);
+      return wrap;
+    }
+
+    function populate(list){
+      board.innerHTML='';
+      const frag = document.createDocumentFragment();
+      list.forEach((name,i)=> frag.appendChild(createCard(name,i)));
+      board.appendChild(frag);
+    }
+
+    function shuffle(arr){
+      for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]]; }
+      return arr;
+    }
+
+    populate(people);
+
+    document.getElementById('resetBtn').addEventListener('click', ()=>{
+      document.querySelectorAll('.card.flipped').forEach(c=>c.classList.remove('flipped'));
+    });
+
+    document.getElementById('shuffleBtn').addEventListener('click', ()=>{
+      const newOrder = shuffle([...people]); populate(newOrder);
+    });
+
+    if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+      document.querySelectorAll('.card').forEach(c=>c.style.transition='none');
+    }
+  </script>
+</body>
+</html>
